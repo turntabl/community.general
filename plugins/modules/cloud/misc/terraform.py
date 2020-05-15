@@ -154,8 +154,10 @@ command:
 """
 
 import os
+import csv
 import json
 import tempfile
+import time
 import traceback
 from ansible.module_utils.six.moves import shlex_quote
 
@@ -166,23 +168,22 @@ APPLY_ARGS = ('apply', '-no-color', '-input=false', '-auto-approve=true')
 module = None
 
 
-def preflight_validation(bin_path, project_path, variables_args=None, plan_file=None):
-    if project_path in [None, ''] or '/' not in project_path:
-        module.fail_json(msg="Path for Terraform project can not be None or ''.")
-    if not os.path.exists(bin_path):
-        module.fail_json(msg="Path for Terraform binary '{0}' doesn't exist on this host - check the path and try again please.".format(bin_path))
-    if not os.path.isdir(project_path):
-        module.fail_json(msg="Path for Terraform project '{0}' doesn't exist on this host - check the path and try again please.".format(project_path))
+def preflight_validation(module, bin_path, project_path, variables_args=None, plan_file=None):
+    if (project_path in [None, ''] or '/' not in project_path and bin_path in [None, '']) or (project_path not in [None, ''] and bin_path in [None, '']) or (project_path in [None, ''] and bin_path not in [None, '']):
+        module.fail_json(msg="Paths for both project_path and bin_path cannot be None or ''.")
+    elif project_path not in [None, ''] or '/' in project_path and bin_path not in [None, '']:
+        if (not os.path.exists(bin_path) and not os.path.exists(project_path)) or (os.path.exists(bin_path) and not os.path.exists(project_path)) or (not os.path.exists(bin_path) and os.path.exists(project_path)):
+            module.fail_json(msg="Path for Terraform binary or project path '{0}' doesn't exist on this host: paths_provided - (terraform-binary-path: '{0}' project-path: '{1}') - check the paths and try again please.".format(bin_path, project_path))
+        else:
+            rc, out, err = module.run_command([bin_path, 'validate'] + variables_args, cwd=project_path, use_unsafe_shell=True)
+            if rc != 0:
+                module.fail_json(msg="Failed to validate Terraform configuration files:\r\n{0}".format(err))
 
-    rc, out, err = module.run_command([bin_path, 'validate'] + variables_args, cwd=project_path, use_unsafe_shell=True)
-    if rc != 0:
-        module.fail_json(msg="Failed to validate Terraform configuration files:\r\n{0}".format(err))
 
-
-def _state_args(state_file):
+def _state_args(module, state_file):
     if state_file and os.path.exists(state_file):
         return ['-state', state_file]
-    if state_file and not os.path.exists(state_file):
+    elif state_file and not os.path.exists(state_file):
         module.fail_json(msg='Could not find state_file "{0}", check the path and try again.'.format(state_file))
     return []
 
@@ -246,7 +247,7 @@ def build_plan(command, project_path, variables_args, state_file, targets, state
     for t in (module.params.get('targets') or []):
         plan_command.extend(['-target', t])
 
-    plan_command.extend(_state_args(state_file))
+    plan_command.extend(_state_args(module, state_file))
 
     rc, out, err = module.run_command(plan_command + variables_args, cwd=project_path, use_unsafe_shell=True)
 
@@ -262,12 +263,80 @@ def build_plan(command, project_path, variables_args, state_file, targets, state
 
     module.fail_json(msg='Terraform plan failed with unexpected exit code {0}. \r\nSTDOUT: {1}\r\n\r\nSTDERR: {2}'.format(rc, out, err))
 
+def create_audit_file_and_directory(directory_name, file_name):
+    full_path=directory_name+'/'+file_name
+    if not os.path.exists(directory_name):
+        os.mkdir(directory_name)
+
+    if not os.path.exists(full_path):
+        with open(full_path, 'w') as file_created:
+            fieldnames = ['time', 'plan_used', 'state_used', 'command_run', 'resources_changed', 'resources_added', 'resources_destroyed']
+            writer = csv.DictWriter(file_created, fieldnames=fieldnames)
+            writer.writeheader()
+            csv_writer=csv.writer(file_created)
+
+
+def audit(path_to_audit_file, plan_used, state_used, command_run, stdout):
+    timestamp = time.strftime('%d-%m-%Y %H:%M:%S')
+    if not state_used:
+        state_file = "./terraform.tfstate"
+    else:
+        state_file = state_used
+    command_used = command_run[1]
+    changes_number = 0
+    added_number = 0
+    destroyed_number = 0
+    if command_used == "apply":
+        if "No changes. Infrastructure is up-to-date" in stdout:
+            changes_number = 0
+            added_number = 0
+            destroyed_number = 0
+        elif "Apply complete!" in stdout:
+            changes_number = stdout[(stdout.find("changed")) - 2]
+            added_number = stdout[(stdout.find("added")) - 2]
+            destroyed_number = stdout[(stdout.find("destroyed")) - 2]
+    elif command_used == "destroy":
+        destroyed_number = stdout[(stdout.find("destroyed")) - 2]
+
+    items_to_write = [timestamp, plan_used, state_file, command_used, changes_number, added_number, destroyed_number]
+
+    with open(path_to_audit_file, 'a+') as file_opened:
+        csv_writer=csv.writer(file_opened)
+        csv_writer.writerow(items_to_write)
+
+def get_plan_file_name_without_extension(plan_file_path):
+    file_name, extension = os.path.basename(plan_file_path).split(".")
+    return file_name
+
+
+def get_plans_used():
+    plans = []
+    with open('./audit/audit.csv', 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if 'plan' in row.values():
+                plans.append(row)
+    return plans
+
+def get_plan_file_from_audit_csv(plan_id):
+    all_entries_with_file = []
+    search_file_path = '/tmp/{0}.tfplan'.format(plan_id)
+    for i in get_plans_used():
+        if search_file_path in i.values():
+            all_entries_with_file.append(i)
+    if all_entries_with_file:
+        return all_entries_with_file[0]['plan_used']
+    else:
+        return ''
+
 
 def main():
+    message=""
     global module
     module = AnsibleModule(
         argument_spec=dict(
             project_path=dict(required=True, type='path'),
+            plan_id=dict(type='str'),
             binary_path=dict(type='path'),
             workspace=dict(required=False, type='str', default='default'),
             purge_workspace=dict(type='bool', default=False),
@@ -282,7 +351,7 @@ def main():
             force_init=dict(type='bool', default=False),
             backend_config=dict(type='dict', default=None),
         ),
-        required_if=[('state', 'planned', ['plan_file'])],
+        #required_if=[('state', 'planned', ['plan_file'])],
         supports_check_mode=True,
     )
 
@@ -297,6 +366,7 @@ def main():
     state_file = module.params.get('state_file')
     force_init = module.params.get('force_init')
     backend_config = module.params.get('backend_config')
+    plan_id = module.params.get('plan_id')
 
     if bin_path is not None:
         command = [bin_path]
@@ -327,7 +397,7 @@ def main():
     if variables_file:
         variables_args.extend(['-var-file', variables_file])
 
-    preflight_validation(command[0], project_path, variables_args)
+    preflight_validation(module, command[0], project_path, variables_args)
 
     if module.params.get('lock') is not None:
         if module.params.get('lock'):
@@ -345,6 +415,8 @@ def main():
 
     out, err = '', ''
 
+    create_audit_file_and_directory("audit", "audit.csv")
+
     if state == 'absent':
         command.extend(variables_args)
     elif state == 'present' and plan_file:
@@ -352,10 +424,31 @@ def main():
             command.append(plan_file)
         else:
             module.fail_json(msg='Could not find plan_file "{0}", check the path and try again.'.format(plan_file))
+    elif state == 'present' and plan_id:
+        plan_file = get_plan_file_from_audit_csv(plan_id)
+        if plan_file:
+            command.append(plan_file)
+            message="running apply with plan_id: {0}".format(plan_id)
+        else:
+            module.fail_json(msg="plan file with id does not exist!")
+    elif state == 'present' and not plan_id:
+        last_plan_used = get_plans_used()
+        if last_plan_used:
+            message="no plan file specified. running 'apply' with plan created from recently run 'plan' command with id: {}".format(get_plan_file_name_without_extension(last_plan_used[-1]['plan_used']))
+            command.append(last_plan_used[-1]['plan_used'])
+            plan_file = last_plan_used[-1]['plan_used']
+        else:
+            #no plan command run yet
+            plan_file, needs_application, out, err, command = build_plan(command, project_path, variables_args, state_file,module.params.get('targets'), state, plan_file)
+            command.append(plan_file)
+            message="running apply without having run plan before"
+
     else:
-        plan_file, needs_application, out, err, command = build_plan(command, project_path, variables_args, state_file,
-                                                                     module.params.get('targets'), state, plan_file)
+        plan_file, needs_application, out, err, command = build_plan(command, project_path, variables_args, state_file,module.params.get('targets'), state, plan_file)
         command.append(plan_file)
+        message="plan command executed. plan_id generated: {0}".format(get_plan_file_name_without_extension(plan_file))
+
+
 
     if needs_application and not module.check_mode and not state == 'planned':
         rc, out, err = module.run_command(command, cwd=project_path)
@@ -368,7 +461,7 @@ def main():
                 command=' '.join(command)
             )
 
-    outputs_command = [command[0], 'output', '-no-color', '-json'] + _state_args(state_file)
+    outputs_command = [command[0], 'output', '-no-color', '-json'] + _state_args(module, state_file)
     rc, outputs_text, outputs_err = module.run_command(outputs_command, cwd=project_path)
     if rc == 1:
         module.warn("Could not get Terraform outputs. This usually means none have been defined.\nstdout: {0}\nstderr: {1}".format(outputs_text, outputs_err))
@@ -387,7 +480,9 @@ def main():
     if state == 'absent' and workspace != 'default' and purge_workspace is True:
         remove_workspace(command[0], project_path, workspace)
 
-    module.exit_json(changed=changed, state=state, workspace=workspace, outputs=outputs, stdout=out, stderr=err, command=' '.join(command))
+    audit("audit/audit.csv", plan_file, state_file, command, out)
+
+    module.exit_json(changed=changed, message=message, state=state, workspace=workspace, outputs=outputs, stdout=out, stderr=err, command=' '.join(command))
 
 
 if __name__ == '__main__':
