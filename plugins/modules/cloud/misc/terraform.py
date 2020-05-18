@@ -201,7 +201,7 @@ def init_plugins(bin_path, project_path, backend_config):
         module.fail_json(msg="Failed to initialize Terraform modules:\r\n{0}".format(err))
 
 
-def get_workspace_context(bin_path, project_path):
+def get_workspace_context(module, bin_path, project_path):
     workspace_ctx = {"current": "default", "all": []}
     command = [bin_path, 'workspace', 'list', '-no-color']
     rc, out, err = module.run_command(command, cwd=project_path)
@@ -218,7 +218,7 @@ def get_workspace_context(bin_path, project_path):
     return workspace_ctx
 
 
-def _workspace_cmd(bin_path, project_path, action, workspace):
+def _workspace_cmd(module, bin_path, project_path, action, workspace):
     command = [bin_path, 'workspace', action, workspace, '-no-color']
     rc, out, err = module.run_command(command, cwd=project_path)
     if rc != 0:
@@ -227,18 +227,18 @@ def _workspace_cmd(bin_path, project_path, action, workspace):
 
 
 def create_workspace(bin_path, project_path, workspace):
-    _workspace_cmd(bin_path, project_path, 'new', workspace)
+    _workspace_cmd(module, bin_path, project_path, 'new', workspace)
 
 
 def select_workspace(bin_path, project_path, workspace):
-    _workspace_cmd(bin_path, project_path, 'select', workspace)
+    _workspace_cmd(module, bin_path, project_path, 'select', workspace)
 
 
 def remove_workspace(bin_path, project_path, workspace):
-    _workspace_cmd(bin_path, project_path, 'delete', workspace)
+    _workspace_cmd(module, bin_path, project_path, 'delete', workspace)
 
 
-def build_plan(command, project_path, variables_args, state_file, targets, state, plan_path=None):
+def build_plan(module, command, project_path, variables_args, state_file, targets, state, plan_path=None):
     if plan_path is None:
         f, plan_path = tempfile.mkstemp(suffix='.tfplan')
 
@@ -263,25 +263,21 @@ def build_plan(command, project_path, variables_args, state_file, targets, state
 
     module.fail_json(msg='Terraform plan failed with unexpected exit code {0}. \r\nSTDOUT: {1}\r\n\r\nSTDERR: {2}'.format(rc, out, err))
 
-def create_audit_file_and_directory(directory_name, file_name):
-    full_path=directory_name+'/'+file_name
+def create_audit_file_and_directory(log_activity_path):
+    directory_name, file_name = os.path.split(log_activity_path)
     if not os.path.exists(directory_name):
-        os.mkdir(directory_name)
+        os.makedirs(directory_name)
 
-    if not os.path.exists(full_path):
-        with open(full_path, 'w') as file_created:
-            fieldnames = ['time', 'plan_used', 'state_used', 'command_run', 'resources_changed', 'resources_added', 'resources_destroyed']
+    if not os.path.exists(log_activity_path):
+        with open(log_activity_path, 'w') as file_created:
+            fieldnames = ['time','service_id','plan_used', 'command_run', 'resources_changed', 'resources_added', 'resources_destroyed']
             writer = csv.DictWriter(file_created, fieldnames=fieldnames)
             writer.writeheader()
             csv_writer=csv.writer(file_created)
 
 
-def audit(path_to_audit_file, plan_used, state_used, command_run, stdout):
+def audit(path_to_audit_file, plan_used, command_run, stdout, service_id):
     timestamp = time.strftime('%d-%m-%Y %H:%M:%S')
-    if not state_used:
-        state_file = "./terraform.tfstate"
-    else:
-        state_file = state_used
     command_used = command_run[1]
     changes_number = 0
     added_number = 0
@@ -298,7 +294,7 @@ def audit(path_to_audit_file, plan_used, state_used, command_run, stdout):
     elif command_used == "destroy":
         destroyed_number = stdout[(stdout.find("destroyed")) - 2]
 
-    items_to_write = [timestamp, plan_used, state_file, command_used, changes_number, added_number, destroyed_number]
+    items_to_write = [timestamp, service_id, plan_used, command_used, changes_number, added_number, destroyed_number]
 
     with open(path_to_audit_file, 'a+') as file_opened:
         csv_writer=csv.writer(file_opened)
@@ -309,13 +305,14 @@ def get_plan_file_name_without_extension(plan_file_path):
     return file_name
 
 
-def get_plans_used():
+def get_plans_used(log_activity_path, service_id):
     plans = []
-    with open('./audit/audit.csv', 'r') as csvfile:
+    with open(log_activity_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            if 'plan' in row.values():
-                plans.append(row)
+            if service_id in row.values():
+                if 'plan' in row.values():
+                    plans.append(row)
     return plans
 
 def get_plan_file_from_audit_csv(plan_id):
@@ -337,6 +334,8 @@ def main():
         argument_spec=dict(
             project_path=dict(required=True, type='path'),
             plan_id=dict(type='str'),
+            log_activity_path=dict(type='path'),
+            service_id=dict(type='str'),
             binary_path=dict(type='path'),
             workspace=dict(required=False, type='str', default='default'),
             purge_workspace=dict(type='bool', default=False),
@@ -367,6 +366,9 @@ def main():
     force_init = module.params.get('force_init')
     backend_config = module.params.get('backend_config')
     plan_id = module.params.get('plan_id')
+    log_activity_path = module.params.get('log_activity_path')
+    service_id = module.params.get('service_id')
+
 
     if bin_path is not None:
         command = [bin_path]
@@ -376,7 +378,7 @@ def main():
     if force_init:
         init_plugins(command[0], project_path, backend_config)
 
-    workspace_ctx = get_workspace_context(command[0], project_path)
+    workspace_ctx = get_workspace_context(module, command[0], project_path)
     if workspace_ctx["current"] != workspace:
         if workspace not in workspace_ctx["all"]:
             create_workspace(command[0], project_path, workspace)
@@ -439,12 +441,12 @@ def main():
             plan_file = last_plan_used[-1]['plan_used']
         else:
             #no plan command run yet
-            plan_file, needs_application, out, err, command = build_plan(command, project_path, variables_args, state_file,module.params.get('targets'), state, plan_file)
+            plan_file, needs_application, out, err, command = build_plan(module, command, project_path, variables_args, state_file,module.params.get('targets'), state, plan_file)
             command.append(plan_file)
             message="running apply without having run plan before"
 
     else:
-        plan_file, needs_application, out, err, command = build_plan(command, project_path, variables_args, state_file,module.params.get('targets'), state, plan_file)
+        plan_file, needs_application, out, err, command = build_plan(module, command, project_path, variables_args, state_file,module.params.get('targets'), state, plan_file)
         command.append(plan_file)
         message="plan command executed. plan_id generated: {0}".format(get_plan_file_name_without_extension(plan_file))
 

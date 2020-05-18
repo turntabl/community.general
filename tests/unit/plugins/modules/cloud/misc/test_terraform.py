@@ -5,13 +5,13 @@ import pytest
 import sys
 
 from ansible_collections.community.general.plugins.modules.cloud.misc import terraform
-import terraform
 
 import mock
 import os
 
 from ansible.module_utils._text import to_bytes
 from ansible.module_utils import basic
+
 
 
 def set_module_args(args):
@@ -41,45 +41,119 @@ def exit_json(*args, **kwargs):
     raise AnsibleExitJson(kwargs)
 
 
-module = mock.MagicMock()
-module.fail_json.side_effect = AnsibleFailJson(Exception)
-module.exit_json.side_effect = AnsibleExitJson(Exception)
-
 def test_state_args():
+    module = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
     with pytest.raises(AnsibleFailJson):
         terraform._state_args(module, '/rrrr')
     module.fail_json.assert_called()
 
 def test_returned_value_state_args():
+    module = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
     value = terraform._state_args(module, '/vagrant')
     assert value == ['-state', '/vagrant']
 
+
 def test_return_empty_list_state_args():
+    module = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
     value = terraform._state_args(module, '')
     assert value == []
     
 
 def test_fail_json_preflight_validation_with_project_path_not_provided():
+    module = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
     with pytest.raises(AnsibleFailJson):
         terraform.preflight_validation(module,'', '/rri')
-    print(module.fail_json.msg)
 
     module.fail_json.assert_called()
     
 
-def test_preflight_validation_with_arguments_satisfied():
-    set_module_args({
-        'project_path':'/vagrant',
-        'bin_path':'/vagrant',
-        })
-    module.patch.object(basic.AnsibleModule, 'run_command', return_values=(0, '', ''))
-    module.run_command('/usr/bin/command args')
-    #with mock.patch.object(basic.AnsibleModule, 'run_command') as run_command:
-       # run_command.return_value = 0, '', ''
-        #with pytest.raises(AnsibleExitJson) as result:
-            #terraform.preflight_validation(module, '/vagrant', '/vagrant', ['yy','see'])
-    module.main()
-    module.run_command.assert_called_once_with('/usr/bin/command args')
+def test_preflight_validation_with_arguments_satisfied_but_with_error_code_returned():
+    module = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
+    module.run_command = mock.MagicMock()
+    module.run_command.return_value = (1, '', '')
+    with pytest.raises(AnsibleFailJson) as result:
+        terraform.preflight_validation(module, '/usr/local/bin/', '/home/vagrant/heroku-test/', [''])
+    module.fail_json.assert_called()
+
+def test_preflight_validation_with_arguments_satisfied_without_error_code():
+    module = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
+    module.run_command = mock.MagicMock()
+    module.run_command.return_value = (0, '', '')
+    terraform.preflight_validation(module, '/usr/local/bin/', '/home/vagrant/heroku-test/', [''])
+
+    module.fail_json.assert_not_called()
+
+def test_get_workspace_context():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    out = '''
+    default
+    * turntabl
+    office
+    '''
+    module.run_command.return_value = (0, out, '')
+    returned_results = terraform.get_workspace_context(module, '/usr/local/bin/', '/vagrant')
+    expected_results = {'current': 'turntabl', 'all': ['default', 'office']}
+    assert returned_results == expected_results
+
+
+def test_build_plan_with_state_planned():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    module.run_command.return_value = (0, '', '')
+    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'planned', '/tmp/tmpAE4.tfplan')
+    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', False, '', '', ['/usr/local/bin/terraform', 'plan', '-input=false', '-no-color', '-detailed-exitcode', '-out', '/tmp/tmpAE4.tfplan'])
+
+def test_build_plan_with_state_not_planned_and_return_code_zero():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    module.run_command.return_value = (0, '', '')
+    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'present', '/tmp/tmpAE4.tfplan')
+    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', False, '', '', ['/usr/local/bin/terraform'])
+
+def test_build_plan_with_state_planned_with_returned_code_one():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
+    module.run_command.return_value = (1, '', '')
+    with pytest.raises(AnsibleFailJson) as result:
+        returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'planned', '/tmp/tmpAE4.tfplan')
+    module.fail_json.assert_called()
+
+def test_build_plan_with_state_planned_with_return_code_two():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    module.run_command.return_value = (2, '', '')
+    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'planned', '/tmp/tmpAE4.tfplan')
+    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', True, '', '', ['/usr/local/bin/terraform', 'plan', '-input=false', '-no-color', '-detailed-exitcode', '-out', '/tmp/tmpAE4.tfplan'])
+
+def test_build_plan_with_state_not_planned_with_return_code_two():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    module.run_command.return_value = (2, '', '')
+    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'absent', '/tmp/tmpAE4.tfplan')
+    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', True, '', '', ['/usr/local/bin/terraform'])
+
+def test_build_plan_with_return_code_greater_than_two():
+    module = mock.MagicMock()
+    module.run_command = mock.MagicMock()
+    module.fail_json.side_effect = AnsibleFailJson(Exception)
+    module.run_command.return_value = (3, '', '')
+    with pytest.raises(AnsibleFailJson) as result:
+        returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'absent', '/tmp/tmpAE4.tfplan')
+    module.fail_json.assert_called()
+
+
+def test_get_plan_file_name_without_extension():
+    returned_result = terraform.get_plan_file_name_without_extension('./heroku-test/tmpNY45T.tfplan')
+    expected_result = 'tmpNY45T'
+    assert returned_result == expected_result
 
 
 def test_terraform_without_argument(capfd):
