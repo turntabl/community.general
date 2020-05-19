@@ -179,7 +179,6 @@ def preflight_validation(module, bin_path, project_path, variables_args=None, pl
             if rc != 0:
                 module.fail_json(msg="Failed to validate Terraform configuration files:\r\n{0}".format(err))
 
-
 def _state_args(module, state_file):
     if state_file and os.path.exists(state_file):
         return ['-state', state_file]
@@ -315,10 +314,10 @@ def get_plans_used(log_activity_path, service_id):
                     plans.append(row)
     return plans
 
-def get_plan_file_from_audit_csv(plan_id):
+def get_plan_file_from_audit_csv(log_activity_path, service_id, plan_id):
     all_entries_with_file = []
     search_file_path = '/tmp/{0}.tfplan'.format(plan_id)
-    for i in get_plans_used():
+    for i in get_plans_used(log_activity_path, service_id):
         if search_file_path in i.values():
             all_entries_with_file.append(i)
     if all_entries_with_file:
@@ -417,7 +416,7 @@ def main():
 
     out, err = '', ''
 
-    create_audit_file_and_directory("audit", "audit.csv")
+    create_audit_file_and_directory(log_activity_path)
 
     if state == 'absent':
         command.extend(variables_args)
@@ -427,14 +426,14 @@ def main():
         else:
             module.fail_json(msg='Could not find plan_file "{0}", check the path and try again.'.format(plan_file))
     elif state == 'present' and plan_id:
-        plan_file = get_plan_file_from_audit_csv(plan_id)
+        plan_file = get_plan_file_from_audit_csv(log_activity_path, service_id, plan_id)
         if plan_file:
             command.append(plan_file)
             message="running apply with plan_id: {0}".format(plan_id)
         else:
             module.fail_json(msg="plan file with id does not exist!")
     elif state == 'present' and not plan_id:
-        last_plan_used = get_plans_used()
+        last_plan_used = get_plans_used(log_activity_path, service_id)
         if last_plan_used:
             message="no plan file specified. running 'apply' with plan created from recently run 'plan' command with id: {}".format(get_plan_file_name_without_extension(last_plan_used[-1]['plan_used']))
             command.append(last_plan_used[-1]['plan_used'])
@@ -482,7 +481,7 @@ def main():
     if state == 'absent' and workspace != 'default' and purge_workspace is True:
         remove_workspace(command[0], project_path, workspace)
 
-    audit("audit/audit.csv", plan_file, state_file, command, out)
+    audit(log_activity_path, plan_file, command, out, service_id)
 
     module.exit_json(changed=changed, message=message, state=state, workspace=workspace, outputs=outputs, stdout=out, stderr=err, command=' '.join(command))
 
