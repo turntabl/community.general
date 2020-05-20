@@ -179,6 +179,7 @@ def preflight_validation(module, bin_path, project_path, variables_args=None, pl
             if rc != 0:
                 module.fail_json(msg="Failed to validate Terraform configuration files:\r\n{0}".format(err))
 
+
 def _state_args(module, state_file):
     if state_file and os.path.exists(state_file):
         return ['-state', state_file]
@@ -269,7 +270,7 @@ def create_audit_file_and_directory(log_activity_path):
 
     if not os.path.exists(log_activity_path):
         with open(log_activity_path, 'w') as file_created:
-            fieldnames = ['time','service_id','plan_used', 'command_run', 'resources_changed', 'resources_added', 'resources_destroyed']
+            fieldnames = ['time','service_id','plan_used', 'command_run', 'outcome']
             writer = csv.DictWriter(file_created, fieldnames=fieldnames)
             writer.writeheader()
             csv_writer=csv.writer(file_created)
@@ -278,22 +279,17 @@ def create_audit_file_and_directory(log_activity_path):
 def audit(path_to_audit_file, plan_used, command_run, stdout, service_id):
     timestamp = time.strftime('%d-%m-%Y %H:%M:%S')
     command_used = command_run[1]
-    changes_number = 0
-    added_number = 0
-    destroyed_number = 0
-    if command_used == "apply":
-        if "No changes. Infrastructure is up-to-date" in stdout:
-            changes_number = 0
-            added_number = 0
-            destroyed_number = 0
-        elif "Apply complete!" in stdout:
-            changes_number = stdout[(stdout.find("changed")) - 2]
-            added_number = stdout[(stdout.find("added")) - 2]
-            destroyed_number = stdout[(stdout.find("destroyed")) - 2]
-    elif command_used == "destroy":
-        destroyed_number = stdout[(stdout.find("destroyed")) - 2]
+    outcome = ''
+    if command_used == "apply" or command_used == "destroy":
+        for line in stdout.split('\n'):
+            if line.startswith('Apply complete!') or line.startswith('No changes') or line.startswith('Destroy complete!'):
+                outcome = line
+    elif command_used == "plan":
+        for line in stdout.split('\n'):
+            if line.startswith('Plan:') or line.startswith('No changes'):
+                outcome = line
 
-    items_to_write = [timestamp, service_id, plan_used, command_used, changes_number, added_number, destroyed_number]
+    items_to_write = [timestamp, service_id, plan_used, command_used, outcome]
 
     with open(path_to_audit_file, 'a+') as file_opened:
         csv_writer=csv.writer(file_opened)
