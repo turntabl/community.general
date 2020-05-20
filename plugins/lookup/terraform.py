@@ -29,14 +29,14 @@ options:
 '''
 
 EXAMPLES = '''
-- debug: msg="the value of foo.txt is {{ lookup('terraform',
-    resource_type='aws_ec2_instance', state_file='mydir/foo.txt', resource_name='project-name') }}"
+- debug: msg="the ID is {{ lookup('terraform',
+    resource_type='aws_lb', state_file='mydir/foo.txt', resource_name='foo') }}"
 '''
 
 RETURN = '''
 _raw:
     description:
-        - information about resources which match search
+        - IDs about resources which match lookup
 '''
 
 
