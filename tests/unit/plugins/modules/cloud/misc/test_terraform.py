@@ -48,11 +48,13 @@ def test_state_args():
         terraform._state_args(module, '/rrrr')
     module.fail_json.assert_called()
 
-def test_returned_value_state_args():
+def test_returned_value_state_args(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.txt")
     module = mock.MagicMock()
     module.fail_json.side_effect = AnsibleFailJson(Exception)
-    value = terraform._state_args(module, '/vagrant')
-    assert value == ['-state', '/vagrant']
+    value = terraform._state_args(module, test_file.dirname)
+    assert value == ['-state', test_file.dirname]
 
 
 def test_return_empty_list_state_args():
@@ -71,25 +73,31 @@ def test_fail_json_preflight_validation_with_project_path_not_provided():
     module.fail_json.assert_called()
     
 
-def test_preflight_validation_with_arguments_satisfied_but_with_error_code_returned():
+def test_preflight_validation_with_arguments_satisfied_but_with_error_code_returned(tmpdir):
+    test_project_path = tmpdir.mkdir("project-path")
+    test_file = test_project_path.join("test_file.tfplan")
     module = mock.MagicMock()
     module.fail_json.side_effect = AnsibleFailJson(Exception)
     module.run_command = mock.MagicMock()
     module.run_command.return_value = (1, '', '')
     with pytest.raises(AnsibleFailJson) as result:
-        terraform.preflight_validation(module, '/usr/local/bin/', '/home/vagrant/heroku-test/', [''])
+        terraform.preflight_validation(module, '/', test_file.dirname, [''])
     module.fail_json.assert_called()
 
-def test_preflight_validation_with_arguments_satisfied_without_error_code():
+def test_preflight_validation_with_arguments_satisfied_without_error_code(tmpdir):
+    test_project_path = tmpdir.mkdir("project-path")
+    test_file = test_project_path.join("test_file.tfplan")
     module = mock.MagicMock()
     module.fail_json.side_effect = AnsibleFailJson(Exception)
     module.run_command = mock.MagicMock()
     module.run_command.return_value = (0, '', '')
-    terraform.preflight_validation(module, '/usr/local/bin/', '/home/vagrant/heroku-test/', [''])
+    terraform.preflight_validation(module, '/', test_file.dirname, [''])
 
     module.fail_json.assert_not_called()
 
-def test_get_workspace_context():
+def test_get_workspace_context(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     out = '''
@@ -98,55 +106,75 @@ def test_get_workspace_context():
     office
     '''
     module.run_command.return_value = (0, out, '')
-    returned_results = terraform.get_workspace_context(module, '/usr/local/bin/', '/vagrant')
+    returned_results = terraform.get_workspace_context(module, test_file.dirname, test_file.dirname)
     expected_results = {'current': 'turntabl', 'all': ['default', 'office']}
     assert returned_results == expected_results
 
 
-def test_build_plan_with_state_planned():
+def test_build_plan_with_state_planned(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
+    full_path = os.path.join(test_file.dirname, test_file.basename)
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     module.run_command.return_value = (0, '', '')
-    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'planned', '/tmp/tmpAE4.tfplan')
-    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', False, '', '', ['/usr/local/bin/terraform', 'plan', '-input=false', '-no-color', '-detailed-exitcode', '-out', '/tmp/tmpAE4.tfplan'])
+    returned_tuple_results = terraform.build_plan(module, [test_file.dirname], test_file.dirname, [], '', [], 'planned', full_path)
+    print(returned_tuple_results)
+    assert returned_tuple_results == (full_path, False, '', '', [test_file.dirname, 'plan', '-input=false', '-no-color', '-detailed-exitcode','-out',full_path])
+    
 
-def test_build_plan_with_state_not_planned_and_return_code_zero():
+def test_build_plan_with_state_not_planned_and_return_code_zero(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
+    full_path = os.path.join(test_file.dirname, test_file.basename)
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     module.run_command.return_value = (0, '', '')
-    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'present', '/tmp/tmpAE4.tfplan')
-    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', False, '', '', ['/usr/local/bin/terraform'])
+    returned_tuple_results = terraform.build_plan(module, [test_file.dirname], test_file.dirname, [], '', [], 'present', full_path)
+    assert returned_tuple_results == (full_path, False, '', '', [test_file.dirname])
 
-def test_build_plan_with_state_planned_with_returned_code_one():
+def test_build_plan_with_state_planned_with_returned_code_one(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
+    full_path = os.path.join(test_file.dirname, test_file.basename)
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     module.fail_json.side_effect = AnsibleFailJson(Exception)
     module.run_command.return_value = (1, '', '')
     with pytest.raises(AnsibleFailJson) as result:
-        returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'planned', '/tmp/tmpAE4.tfplan')
+        returned_tuple_results = terraform.build_plan(module, [test_file.dirname], test_file.dirname, [], '', [], 'planned', full_path)
     module.fail_json.assert_called()
 
-def test_build_plan_with_state_planned_with_return_code_two():
+def test_build_plan_with_state_planned_with_return_code_two(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
+    full_path = os.path.join(test_file.dirname, test_file.basename)
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     module.run_command.return_value = (2, '', '')
-    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'planned', '/tmp/tmpAE4.tfplan')
-    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', True, '', '', ['/usr/local/bin/terraform', 'plan', '-input=false', '-no-color', '-detailed-exitcode', '-out', '/tmp/tmpAE4.tfplan'])
+    returned_tuple_results = terraform.build_plan(module, [test_file.dirname], test_file.dirname, [], '', [], 'planned', full_path)
+    assert returned_tuple_results == (full_path, True, '', '', [test_file.dirname, 'plan', '-input=false', '-no-color', '-detailed-exitcode', '-out', full_path])
 
-def test_build_plan_with_state_not_planned_with_return_code_two():
+def test_build_plan_with_state_not_planned_with_return_code_two(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
+    full_path = os.path.join(test_file.dirname, test_file.basename)
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     module.run_command.return_value = (2, '', '')
-    returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'absent', '/tmp/tmpAE4.tfplan')
-    assert returned_tuple_results == ('/tmp/tmpAE4.tfplan', True, '', '', ['/usr/local/bin/terraform'])
+    returned_tuple_results = terraform.build_plan(module, [test_file.dirname], test_file.dirname, [], '', [], 'absent', full_path)
+    assert returned_tuple_results == (full_path, True, '', '', [test_file.dirname])
 
-def test_build_plan_with_return_code_greater_than_two():
+def test_build_plan_with_return_code_greater_than_two(tmpdir):
+    test_temp_folder_for_project_path = tmpdir.mkdir("project-path")
+    test_file = test_temp_folder_for_project_path.join("test_file.tfplan")
+    full_path = os.path.join(test_file.dirname, test_file.basename)
     module = mock.MagicMock()
     module.run_command = mock.MagicMock()
     module.fail_json.side_effect = AnsibleFailJson(Exception)
     module.run_command.return_value = (3, '', '')
     with pytest.raises(AnsibleFailJson) as result:
-        returned_tuple_results = terraform.build_plan(module, ['/usr/local/bin/terraform'], '/home/vagrant/heroku-test', [], '', [], 'absent', '/tmp/tmpAE4.tfplan')
+        returned_tuple_results = terraform.build_plan(module, [test_file.dirname], test_file.dirname, [], '', [], 'absent', full_path)
     module.fail_json.assert_called()
 
 
