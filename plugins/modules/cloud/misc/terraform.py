@@ -154,7 +154,6 @@ command:
 """
 
 import os
-import csv
 import json
 import tempfile
 import time
@@ -263,57 +262,89 @@ def build_plan(module, command, project_path, variables_args, state_file, target
 
     module.fail_json(msg='Terraform plan failed with unexpected exit code {0}. \r\nSTDOUT: {1}\r\n\r\nSTDERR: {2}'.format(rc, out, err))
 
-def create_audit_file_and_directory(log_activity_path):
-    directory_name, file_name = os.path.split(log_activity_path)
-    if not os.path.exists(directory_name):
-        os.makedirs(directory_name)
+def return_full_path(log_activity_folder, service_id):
+    if log_activity_folder[-1] != '/':
+        full_path = log_activity_folder + '/'+ service_id
+    else:
+        full_path = log_activity_folder + service_id
 
-    if not os.path.exists(log_activity_path):
-        with open(log_activity_path, 'w') as file_created:
-            fieldnames = ['time','service_id','plan_used', 'command_run', 'outcome']
-            writer = csv.DictWriter(file_created, fieldnames=fieldnames)
-            writer.writeheader()
-            csv_writer=csv.writer(file_created)
+    return full_path
+
+def create_audit_file_and_directory(log_activity_folder, service_id):
+    full_path = return_full_path(log_activity_folder, service_id)
+    if not os.path.exists(log_activity_folder):
+        os.makedirs(log_activity_folder)
+
+    if not os.path.exists(full_path):
+        with open(full_path, 'w') as file_created:
+            json.dump([], file_created, indent=4)
 
 
-def audit(path_to_audit_file, plan_used, command_run, stdout, service_id):
+def audit(log_activity_folder, service_id, plan_used, command_run, stdout):
+    path_to_audit_file = return_full_path(log_activity_folder, service_id)
     timestamp = time.strftime('%d-%m-%Y %H:%M:%S')
     command_used = command_run[1]
     outcome = ''
+    list_destruction = []
+    list_creation = []
+    list_modification = []
     if command_used == "apply" or command_used == "destroy":
         for line in stdout.split('\n'):
             if line.startswith('Apply complete!') or line.startswith('No changes') or line.startswith('Destroy complete!'):
                 outcome = line
+                break
+            else:
+                try:
+                    if line.split(':')[1].startswith(" Destruction"):
+                        list_destruction.append(line.split(':')[0])
+                    if line.split(':')[1].startswith(" Creation"):
+                        list_creation.append(line.split(':')[0])
+                    if line.split(':')[1].startswith(" Modification"):
+                        list_modification.append(line.split(':')[0])
+                except IndexError:
+                    pass
     elif command_used == "plan":
         for line in stdout.split('\n'):
             if line.startswith('Plan:') or line.startswith('No changes'):
                 outcome = line
+    items_to_write = {
+            'time': timestamp,
+            'plan_used': plan_used,
+            'command_run': command_used,
+            'outcome': outcome,
+            'resources_added': list_creation,
+            'resources_changed': list_modification,
+            'resources_destroyed': list_destruction
+            }
 
-    items_to_write = [timestamp, service_id, plan_used, command_used, outcome]
+    with open(path_to_audit_file, 'r') as file_opened:
+        data_stored = json.load(file_opened)
 
-    with open(path_to_audit_file, 'a+') as file_opened:
-        csv_writer=csv.writer(file_opened)
-        csv_writer.writerow(items_to_write)
+    data_stored.append(items_to_write)
+
+    with open(path_to_audit_file, 'w') as file_opened:
+        json.dump(data_stored, file_opened, indent=4)
 
 def get_plan_file_name_without_extension(plan_file_path):
     file_name, extension = os.path.basename(plan_file_path).split(".")
     return file_name
 
 
-def get_plans_used(log_activity_path, service_id):
+def get_plans_used(log_activity_folder, service_id):
+    log_activity_path = return_full_path(log_activity_folder, service_id)
     plans = []
-    with open(log_activity_path, 'r') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if service_id in row.values():
-                if 'plan' in row.values():
-                    plans.append(row)
+    with open(log_activity_path, 'r') as file_opened:
+        data_stored = json.load(file_opened)
+    for record in data_stored:
+        if 'plan' in record.values():
+            plans.append(record)
     return plans
 
-def get_plan_file_from_audit_csv(log_activity_path, service_id, plan_id):
+def get_plan_file_from_audit_file(log_activity_folder, service_id, plan_id):
+    log_activity_path = return_full_path(log_activity_folder, service_id)
     all_entries_with_file = []
     search_file_path = '/tmp/{0}.tfplan'.format(plan_id)
-    for i in get_plans_used(log_activity_path, service_id):
+    for i in get_plans_used(log_activity_folder, service_id):
         if search_file_path in i.values():
             all_entries_with_file.append(i)
     if all_entries_with_file:
@@ -329,8 +360,8 @@ def main():
         argument_spec=dict(
             project_path=dict(required=True, type='path'),
             plan_id=dict(type='str'),
-            log_activity_path=dict(type='path'),
-            service_id=dict(type='str'),
+            log_activity_folder=dict(required=True, type='path'),
+            service_id=dict(required=True, type='str'),
             binary_path=dict(type='path'),
             workspace=dict(required=False, type='str', default='default'),
             purge_workspace=dict(type='bool', default=False),
@@ -361,7 +392,7 @@ def main():
     force_init = module.params.get('force_init')
     backend_config = module.params.get('backend_config')
     plan_id = module.params.get('plan_id')
-    log_activity_path = module.params.get('log_activity_path')
+    log_activity_folder = module.params.get('log_activity_folder')
     service_id = module.params.get('service_id')
 
 
@@ -412,7 +443,7 @@ def main():
 
     out, err = '', ''
 
-    create_audit_file_and_directory(log_activity_path)
+    create_audit_file_and_directory(log_activity_folder, service_id)
 
     if state == 'absent':
         command.extend(variables_args)
@@ -422,14 +453,14 @@ def main():
         else:
             module.fail_json(msg='Could not find plan_file "{0}", check the path and try again.'.format(plan_file))
     elif state == 'present' and plan_id:
-        plan_file = get_plan_file_from_audit_csv(log_activity_path, service_id, plan_id)
+        plan_file = get_plan_file_from_audit_file(log_activity_folder, service_id, plan_id)
         if plan_file:
             command.append(plan_file)
             message="running apply with plan_id: {0}".format(plan_id)
         else:
             module.fail_json(msg="plan file with id does not exist!")
     elif state == 'present' and not plan_id:
-        last_plan_used = get_plans_used(log_activity_path, service_id)
+        last_plan_used = get_plans_used(log_activity_folder, service_id)
         if last_plan_used:
             message="no plan file specified. running 'apply' with plan created from recently run 'plan' command with id: {}".format(get_plan_file_name_without_extension(last_plan_used[-1]['plan_used']))
             command.append(last_plan_used[-1]['plan_used'])
@@ -477,7 +508,7 @@ def main():
     if state == 'absent' and workspace != 'default' and purge_workspace is True:
         remove_workspace(command[0], project_path, workspace)
 
-    audit(log_activity_path, plan_file, command, out, service_id)
+    audit(log_activity_folder, service_id, plan_file, command, out)
 
     module.exit_json(changed=changed, message=message, state=state, workspace=workspace, outputs=outputs, stdout=out, stderr=err, command=' '.join(command))
 
