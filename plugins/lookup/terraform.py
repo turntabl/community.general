@@ -51,19 +51,22 @@ try:
     HAS_LIB = True
 except ImportError:
     HAS_LIB = False
+def json_query(data, expr):
+
+  '''Query json data using jmespath query language ( http://jmespath.org )'''
+  if not HAS_LIB:
+
+    raise AnsibleError('You need to install "jmespath" to run this plugin')
+  try:
+    return jmespath.search(expr, data)
+  except jmespath.exceptions.JMESPathError as e:
+    raise AnsibleError('JMESPathError in json_query lookup plugin:\n%s' % to_native(e))
+  except Exception as e:
+    raise AnsibleError('Error in jmespath.search in json_query lookup plugin:\n%s' % to_native(e))
+
 
 class LookupModule(LookupBase):
 
-  def json_query(self, data, expr):
-    '''Query json data using jmespath query language ( http://jmespath.org )'''
-    if not HAS_LIB:
-        raise AnsibleError('You need to install "jmespath" to run this plugin')
-    try:
-        return jmespath.search(expr, data)
-    except jmespath.exceptions.JMESPathError as e:
-        raise AnsibleError('JMESPathError in json_query lookup plugin:\n%s' % to_native(e))
-    except Exception as e:
-        raise AnsibleError('Error in jmespath.search in json_query lookup plugin:\n%s' % to_native(e))
 
   def run(self, terms, variables=None, **kwargs):
 
@@ -90,7 +93,7 @@ class LookupModule(LookupBase):
         if resource_type is not None and resource_name is not None:
           query = "((resources[?type == '{resource_type}'].instances[].attributes.id) && (resources[?name == '{resource_name}'].instances[].attributes.id))".format(resource_type=resource_type, resource_name=resource_name)
           
-        returned_data.append(self.json_query(data, query))  
+        returned_data.append(json_query(data, query))  
 
     except AnsibleError:
       raise AnsibleError('File not found in %s' % state_file)
