@@ -23,10 +23,6 @@ from __future__ import (absolute_import, division, print_function)
 
 __metaclass__ = type
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
 DOCUMENTATION = '''
 ---
 module: ali_instance
@@ -250,7 +246,7 @@ extends_documentation_fragment:
 
 EXAMPLES = '''
 # basic provisioning example vpc network
-- name: basic provisioning example
+- name: Basic provisioning example
   hosts: localhost
   vars:
     alicloud_access_key: <your-alicloud-access-key-id>
@@ -272,7 +268,7 @@ EXAMPLES = '''
     force: True
 
   tasks:
-    - name: launch ECS instance in VPC network
+    - name: Launch ECS instance in VPC network
       ali_instance:
         alicloud_access_key: '{{ alicloud_access_key }}'
         alicloud_secret_key: '{{ alicloud_secret_key }}'
@@ -290,7 +286,7 @@ EXAMPLES = '''
         host_name: '{{ host_name }}'
         password: '{{ password }}'
 
-    - name: with count and count_tag to create a number of instances
+    - name: With count and count_tag to create a number of instances
       ali_instance:
         alicloud_access_key: '{{ alicloud_access_key }}'
         alicloud_secret_key: '{{ alicloud_secret_key }}'
@@ -312,7 +308,7 @@ EXAMPLES = '''
         host_name: '{{ host_name }}'
         password: '{{ password }}'
 
-    - name: start instance
+    - name: Start instance
       ali_instance:
         alicloud_access_key: '{{ alicloud_access_key }}'
         alicloud_secret_key: '{{ alicloud_secret_key }}'
@@ -320,7 +316,7 @@ EXAMPLES = '''
         instance_ids: '{{ instance_ids }}'
         state: 'running'
 
-    - name: reboot instance forcibly
+    - name: Reboot instance forcibly
       ecs:
         alicloud_access_key: '{{ alicloud_access_key }}'
         alicloud_secret_key: '{{ alicloud_secret_key }}'

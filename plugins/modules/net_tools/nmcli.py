@@ -8,12 +8,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
-
 DOCUMENTATION = r'''
 ---
 module: nmcli
@@ -26,7 +20,7 @@ requirements:
 - nmcli
 description:
     - Manage the network devices. Create, modify and manage various connection and device type e.g., ethernet, teams, bonds, vlans etc.
-    - 'On CentOS 8 and Fedora >=29 like systems, the requirements can be met by installing the following packages: NetworkManager-nmlib,
+    - 'On CentOS 8 and Fedora >=29 like systems, the requirements can be met by installing the following packages: NetworkManager-libnm,
       libsemanage-python, policycoreutils-python.'
     - 'On CentOS 7 and Fedora <=28 like systems, the requirements can be met by installing the following packages: NetworkManager-glib,
       libnm-qt-devel.x86_64, nm-connection-editor.x86_64, libsemanage-python, policycoreutils-python.'
@@ -360,7 +354,7 @@ EXAMPLES = r'''
   remote_user: root
   tasks:
 
-  - name: install needed network manager libs
+  - name: Install needed network manager libs
     package:
       name:
         - NetworkManager-libnm

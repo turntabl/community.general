@@ -6,11 +6,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: gcpubsub_info
@@ -44,18 +39,18 @@ options:
 '''
 
 EXAMPLES = '''
-## List all Topics in a project
-- gcpubsub_info:
+- name: List all Topics in a project
+  gcpubsub_info:
     view: topics
     state: list
 
-## List all Subscriptions in a project
-- gcpubsub_info:
+- name: List all Subscriptions in a project
+  gcpubsub_info:
     view: subscriptions
     state: list
 
-## List all Subscriptions for a Topic in a project
-- gcpubsub_info:
+- name: List all Subscriptions for a Topic in a project
+  gcpubsub_info:
     view: subscriptions
     topic: my-topic
     state: list

@@ -7,10 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'community'}
-
 DOCUMENTATION = r'''
 ---
 module: postgresql_db
@@ -107,7 +103,9 @@ options:
     type: str
   trust_input:
     description:
-    - If C(no), check whether values of some parameters are potentially dangerous.
+    - If C(no), check whether values of parameters I(owner), I(conn_limit), I(encoding),
+      I(db), I(template), I(tablespace), I(session_role) are potentially dangerous.
+    - It makes sense to use C(yes) only when SQL injections via the parameters are possible.
     type: bool
     default: yes
 seealso:
@@ -179,6 +177,13 @@ EXAMPLES = r'''
     state: dump
     target: /tmp/acme.sql
     target_opts: "-n public"
+
+- name: Dump only table1 and table2 from the acme database
+  postgresql_db:
+    name: acme
+    state: dump
+    target: /tmp/table1_table2.sql
+    target_opts: "-t table1 -t table2"
 
 # Note: In the example below, if database foo exists and has another tablespace
 # the tablespace will be changed to foo. Access to the database will be locked

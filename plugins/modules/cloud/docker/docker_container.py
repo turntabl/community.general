@@ -7,11 +7,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: docker_container
@@ -897,7 +892,7 @@ EXAMPLES = '''
     command: sleep 1d
   with_sequence: count=4
 
-- name: remove container
+- name: Remove container
   docker_container:
     name: ohno
     state: absent
@@ -1036,7 +1031,7 @@ EXAMPLES = '''
       # The "NONE" check needs to be specified
       test: ["NONE"]
 
-- name: start container with block device read limit
+- name: Start container with block device read limit
   docker_container:
     name: test
     image: ubuntu:18.04

@@ -11,11 +11,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: pear
@@ -41,23 +36,23 @@ options:
 '''
 
 EXAMPLES = '''
-# Install pear package
-- pear:
+- name: Install pear package
+  pear:
     name: Net_URL2
     state: present
 
-# Install pecl package
-- pear:
+- name: Install pecl package
+  pear:
     name: pecl/json_post
     state: present
 
-# Upgrade package
-- pear:
+- name: Upgrade package
+  pear:
     name: Net_URL2
     state: latest
 
-# Remove packages
-- pear:
+- name: Remove packages
+  pear:
     name: Net_URL2,pecl/json_post
     state: absent
 '''

@@ -7,12 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
-
 DOCUMENTATION = r'''
 ---
 module: postgresql_idx
@@ -116,7 +110,10 @@ options:
     default: no
   trust_input:
     description:
-    - If C(no), check whether values of some parameters are potentially dangerous.
+    - If C(no), check whether values of parameters I(idxname), I(session_role),
+      I(schema), I(table), I(columns), I(tablespace), I(storage_params),
+      I(cond) are potentially dangerous.
+    - It makes sense to use C(yes) only when SQL injections via the parameters are possible.
     type: bool
     default: yes
 
@@ -142,6 +139,7 @@ notes:
 
 author:
 - Andrew Klychkov (@Andersson007)
+- Thomas O'Donnell (@andytom)
 
 extends_documentation_fragment:
 - community.general.postgres
@@ -415,12 +413,9 @@ class Index(object):
 
         self.executed_query = query
 
-        if exec_sql(self, query, return_bool=True, add_to_executed=False):
-            return True
+        return exec_sql(self, query, return_bool=True, add_to_executed=False)
 
-        return False
-
-    def drop(self, schema, cascade=False, concurrent=True):
+    def drop(self, cascade=False, concurrent=True):
         """Drop PostgreSQL index.
 
         Return True if success, otherwise, return False.
@@ -441,20 +436,14 @@ class Index(object):
         if concurrent:
             query += ' CONCURRENTLY'
 
-        if not schema:
-            query += ' "public"."%s"' % self.name
-        else:
-            query += ' "%s"."%s"' % (schema, self.name)
+        query += ' "%s"."%s"' % (self.schema, self.name)
 
         if cascade:
             query += ' CASCADE'
 
         self.executed_query = query
 
-        if exec_sql(self, query, return_bool=True, add_to_executed=False):
-            return True
-
-        return False
+        return exec_sql(self, query, return_bool=True, add_to_executed=False)
 
 
 # ===========================================
@@ -576,7 +565,7 @@ def main():
             kw['query'] = index.executed_query
 
     else:
-        changed = index.drop(schema, cascade, concurrent)
+        changed = index.drop(cascade, concurrent)
 
         if changed:
             kw['state'] = 'absent'

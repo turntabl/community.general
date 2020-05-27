@@ -7,10 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
 DOCUMENTATION = r'''
 ---
 module: cloudflare_dns
@@ -200,7 +196,7 @@ EXAMPLES = r'''
     account_api_key: dummyapitoken
     state: absent
 
-- name: create a example.net CNAME record to example.com and proxy through Cloudflare's network
+- name: Create a example.net CNAME record to example.com and proxy through Cloudflare's network
   cloudflare_dns:
     zone: example.net
     type: CNAME

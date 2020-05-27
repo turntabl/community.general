@@ -14,11 +14,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: slackpkg
@@ -51,18 +46,18 @@ requirements: [ "Slackware >= 12.2" ]
 '''
 
 EXAMPLES = '''
-# Install package foo
-- slackpkg:
+- name: Install package foo
+  slackpkg:
     name: foo
     state: present
 
-# Remove packages foo and bar
-- slackpkg:
+- name: Remove packages foo and bar
+  slackpkg:
     name: foo,bar
     state: absent
 
-# Make sure that it is the most updated package
-- slackpkg:
+- name: Make sure that it is the most updated package
+  slackpkg:
     name: foo
     state: latest
 '''

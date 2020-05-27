@@ -7,12 +7,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
-
 DOCUMENTATION = '''
 ---
 module: memset_server_info
@@ -36,7 +30,7 @@ options:
 '''
 
 EXAMPLES = '''
-- name: get details for testyaa1
+- name: Get details for testyaa1
   memset_server_info:
     name: testyaa1
     api_key: 5eb86c9896ab03919abcf03857163741

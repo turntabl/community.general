@@ -12,10 +12,6 @@ __metaclass__ = type
 # Documentation
 ###############################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ["preview"],
-                    'supported_by': 'community'}
-
 DOCUMENTATION = '''
 ---
 module: hwc_vpc_security_group_rule
@@ -109,11 +105,11 @@ extends_documentation_fragment:
 
 EXAMPLES = '''
 # create a security group rule
-- name: create a security group
+- name: Create a security group
   hwc_vpc_security_group:
     name: "ansible_network_security_group_test"
   register: sg
-- name: create a security group rule
+- name: Create a security group rule
   hwc_vpc_security_group_rule:
     direction: "ingress"
     protocol: "tcp"

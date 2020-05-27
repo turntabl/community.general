@@ -8,11 +8,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: terraform
@@ -107,13 +102,13 @@ author: "Ryan Scott Brown (@ryansb)"
 '''
 
 EXAMPLES = """
-# Basic deploy of a service
-- terraform:
+- name: Basic deploy of a service
+  terraform:
     project_path: '{{ project_dir }}'
     state: present
 
-# Define the backend configuration at init
-- terraform:
+- name: Define the backend configuration at init
+  terraform:
     project_path: 'project/'
     state: "{{ state }}"
     force_init: true

@@ -22,20 +22,15 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['deprecated'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: ovirt_group_facts
 short_description: Retrieve information about one or more oVirt/RHV groups
 author: "Ondra Machacek (@machacekondra)"
 deprecated:
-    removed_in: "2.10"
+    removed_in: "2.14"
     why: When migrating to collection we decided to use only _info modules.
-    alternative: Use M(ovirt_group_info) instead
+    alternative: Use C(ovirt_group_info) from the C(ovirt.ovirt) collection instead
 description:
     - "Retrieve information about one or more oVirt/RHV groups."
     - This module was called C(ovirt_group_facts) before Ansible 2.9, returning C(ansible_facts).
@@ -50,7 +45,7 @@ options:
         - "Search term which is accepted by oVirt/RHV search backend."
         - "For example to search group X use following pattern: name=X"
 extends_documentation_fragment:
-- ovirt.ovirt.ovirt_info
+- community.general.ovirt_facts
 
 '''
 
@@ -58,11 +53,13 @@ EXAMPLES = '''
 # Examples don't contain auth parameter for simplicity,
 # look at ovirt_auth module to see how to reuse authentication:
 
-# Gather information about all groups which names start with C(admin):
-- ovirt_group_info:
+- name: Gather information about all groups which names start with admin
+  ovirt_group_info:
     pattern: name=admin*
   register: result
-- debug:
+
+- name: Print gathered information
+  debug:
     msg: "{{ result.ovirt_groups }}"
 '''
 
@@ -78,7 +75,7 @@ import traceback
 
 from ansible.module_utils.common.removed import removed_module
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.ovirt.ovirt.plugins.module_utils.ovirt import (
+from ansible_collections.community.general.plugins.module_utils._ovirt import (
     check_sdk,
     create_connection,
     get_dict_of_struct,
@@ -124,4 +121,4 @@ def main():
 
 
 if __name__ == '__main__':
-    removed_module("2.10")
+    main()

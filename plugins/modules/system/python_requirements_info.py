@@ -5,12 +5,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
-
 DOCUMENTATION = '''
 module: python_requirements_info
 short_description: Show python path and assert dependency versions
@@ -30,9 +24,10 @@ author:
 '''
 
 EXAMPLES = '''
-- name: show python lib/site paths
+- name: Show python lib/site paths
   python_requirements_info:
-- name: check for modern boto3 and botocore versions
+
+- name: Check for modern boto3 and botocore versions
   python_requirements_info:
     dependencies:
     - boto3>1.6

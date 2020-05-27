@@ -257,9 +257,9 @@ files:
   $modules/cloud/docker/docker_config.py:
     authors: chouseknecht ushuz
   $modules/cloud/docker/docker_container.py:
-    authors: ThomasSteinbach chouseknecht cove dusdanig felixfontein joshuaconner kassiansun softzilla zfil
+    authors: ThomasSteinbach chouseknecht cove dusdanig felixfontein kassiansun softzilla zfil
     maintainers: DBendit WojciechowskiPiotr akshay196 danihodovic dariko jwitko tbouvet
-    ignore: ThomasSteinbach cove
+    ignore: ThomasSteinbach cove joshuaconner
   $modules/cloud/docker/docker_container_info.py:
     authors: felixfontein
     maintainers: DBendit WojciechowskiPiotr akshay196 danihodovic dariko jwitko kassiansun tbouvet
@@ -552,8 +552,9 @@ files:
   $modules/database/mysql/mysql_replication.py:
     authors: Andersson007 banyek
   $modules/database/mysql/mysql_user.py:
-    authors: Jmainguy bmalynovytch tomaszkiewicz
+    authors: Jmainguy bmalynovytch
     maintainers: Alexander198961 Andersson007 Xyon bmildren kurtdavis michaelcoburn oneiroi tolland
+    ignore: tomaszkiewicz
   $modules/database/mysql/mysql_variables.py:
     authors: banyek
     maintainers: $team_mysql
@@ -1042,10 +1043,6 @@ files:
     ignore: dagwieers
   $modules/remote_management/imc/imc_rest.py:
     authors: dagwieers
-    labels: cisco
-  $modules/remote_management/intersight/intersight_info.py:
-    authors: CiscoUcs dsoper2
-    maintainers: movinalot
     labels: cisco
   $modules/remote_management/ipmi/:
     authors: bgaifullin

@@ -8,11 +8,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: vmadm
@@ -293,7 +288,7 @@ requirements:
 '''
 
 EXAMPLES = '''
-- name: create SmartOS zone
+- name: Create SmartOS zone
   vmadm:
     brand: joyent
     state: present

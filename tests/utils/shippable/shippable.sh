@@ -48,16 +48,6 @@ pip --version
 pip list --disable-pip-version-check
 retry pip install https://github.com/ansible/ansible/archive/devel.tar.gz --disable-pip-version-check
 
-# START: HACK
-if [ "${script}" == "osx" ]; then
-    # Make sure that the latest versions of pyOpenSSL and cryptography will be installed on macOS before
-    # ansible-playbook is started. This is necessary until https://github.com/ansible/ansible/issues/68701
-    # has been fixed.
-    sed -i -e 's/cryptography.*/cryptography >= 2.9.2/g' /root/venv/lib/python2.7/site-packages/ansible_test/_data/requirements/integration.txt
-    echo 'pyOpenSSL >= 19.1.0' >> /root/venv/lib/python2.7/site-packages/ansible_test/_data/requirements/integration.txt
-fi
-# END: HACK
-
 export ANSIBLE_COLLECTIONS_PATHS="${HOME}/.ansible"
 SHIPPABLE_RESULT_DIR="$(pwd)/shippable"
 TEST_DIR="${ANSIBLE_COLLECTIONS_PATHS}/ansible_collections/community/general"
@@ -68,13 +58,11 @@ cd "${TEST_DIR}"
 # START: HACK install dependencies
 retry ansible-galaxy -vvv collection install ansible.netcommon
 retry ansible-galaxy -vvv collection install ansible.posix
-# https://github.com/CiscoDevNet/ansible-intersight/issues/9
-retry ansible-galaxy -vvv collection install cisco.intersight:1.0.4
 retry ansible-galaxy -vvv collection install community.crypto
-retry ansible-galaxy -vvv collection install community.internal_test_tools
+# retry ansible-galaxy -vvv collection install community.internal_test_tools - we need git checkout until 0.2.0 has been released
+retry git clone https://github.com/ansible-collections/community.internal_test_tools.git "${ANSIBLE_COLLECTIONS_PATHS}/ansible_collections/community/internal_test_tools"
 retry ansible-galaxy -vvv collection install community.kubernetes
 retry ansible-galaxy -vvv collection install google.cloud
-retry ansible-galaxy -vvv collection install ovirt.ovirt
 
 # END: HACK
 

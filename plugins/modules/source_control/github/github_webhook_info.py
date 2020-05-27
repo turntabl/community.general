@@ -6,12 +6,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
-
 DOCUMENTATION = '''
 ---
 module: github_webhook_info
@@ -51,14 +45,14 @@ author:
 '''
 
 EXAMPLES = '''
-- name: list hooks for a repository (password auth)
+- name: List hooks for a repository (password auth)
   github_webhook_info:
     repository: ansible/ansible
     user: "{{ github_user }}"
     password: "{{ github_password }}"
   register: ansible_webhooks
 
-- name: list hooks for a repository on GitHub Enterprise (token auth)
+- name: List hooks for a repository on GitHub Enterprise (token auth)
   github_webhook_info:
     repository: myorg/myrepo
     user: "{{ github_user }}"

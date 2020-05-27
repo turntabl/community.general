@@ -7,10 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['deprecated'],
-                    'supported_by': 'community'}
-
 DOCUMENTATION = r'''
 ---
 module: purefa_facts
@@ -43,12 +39,12 @@ extends_documentation_fragment:
 '''
 
 EXAMPLES = r'''
-- name: collect default set of facts
+- name: Collect default set of facts
   purefa_facts:
     fa_url: 10.10.10.2
     api_token: e31060a7-21fc-e277-6240-25983c6c4592
 
-- name: collect configuration and capacity facts
+- name: Collect configuration and capacity facts
   purefa_facts:
     gather_subset:
       - config
@@ -56,7 +52,7 @@ EXAMPLES = r'''
     fa_url: 10.10.10.2
     api_token: e31060a7-21fc-e277-6240-25983c6c4592
 
-- name: collect all facts
+- name: Collect all facts
   purefa_facts:
     gather_subset:
       - all

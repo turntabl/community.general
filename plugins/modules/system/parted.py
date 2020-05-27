@@ -8,11 +8,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = r'''
 ---
 author:
@@ -113,12 +108,15 @@ partition_info:
   returned: success
   type: complex
   contains:
-    device:
+    disk:
       description: Generic device information.
       type: dict
     partitions:
       description: List of device partitions.
       type: list
+    script:
+      description: parted script executed by module
+      type: str
   sample: {
       "disk": {
         "dev": "/dev/sdb",
@@ -145,7 +143,8 @@ partition_info:
         "name": "",
         "num": 2,
         "size": 4.0
-      }]
+      }],
+      "script": "unit KiB print "
     }
 '''
 
@@ -637,11 +636,13 @@ def main():
             changed = True
             script = ""
 
-            current_parts = get_device_info(device, unit)['partitions']
+            if not module.check_mode:
+                current_parts = get_device_info(device, unit)['partitions']
 
         if part_exists(current_parts, 'num', number) or module.check_mode:
-            partition = {'flags': []}      # Empty structure for the check-mode
-            if not module.check_mode:
+            if changed and module.check_mode:
+                partition = {'flags': []}   # Empty structure for the check-mode
+            else:
                 partition = [p for p in current_parts if p['num'] == number][0]
 
             # Assign name to the partition

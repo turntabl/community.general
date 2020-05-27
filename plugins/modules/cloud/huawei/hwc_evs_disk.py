@@ -12,10 +12,6 @@ __metaclass__ = type
 # Documentation
 ###############################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ["preview"],
-                    'supported_by': 'community'}
-
 DOCUMENTATION = '''
 ---
 module: hwc_evs_disk
@@ -158,7 +154,7 @@ extends_documentation_fragment:
 
 EXAMPLES = '''
 # test create disk
-- name: create a disk
+- name: Create a disk
   hwc_evs_disk:
     availability_zone: "cn-north-1a"
     name: "ansible_evs_disk_test"

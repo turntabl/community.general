@@ -699,8 +699,6 @@ plugins/modules/identity/keycloak/keycloak_clienttemplate.py validate-modules:do
 plugins/modules/identity/keycloak/keycloak_clienttemplate.py validate-modules:parameter-type-not-in-doc
 plugins/modules/identity/opendj/opendj_backendprop.py validate-modules:doc-missing-type
 plugins/modules/identity/opendj/opendj_backendprop.py validate-modules:parameter-type-not-in-doc
-plugins/modules/monitoring/airbrake_deployment.py validate-modules:doc-default-does-not-match-spec
-plugins/modules/monitoring/airbrake_deployment.py validate-modules:doc-missing-type
 plugins/modules/monitoring/bigpanda.py validate-modules:doc-default-does-not-match-spec
 plugins/modules/monitoring/bigpanda.py validate-modules:doc-missing-type
 plugins/modules/monitoring/bigpanda.py validate-modules:undocumented-parameter
@@ -1357,8 +1355,6 @@ tests/unit/plugins/module_utils/conftest.py future-import-boilerplate
 tests/unit/plugins/module_utils/conftest.py metaclass-boilerplate
 tests/unit/plugins/module_utils/gcp/test_auth.py future-import-boilerplate
 tests/unit/plugins/module_utils/gcp/test_auth.py metaclass-boilerplate
-tests/unit/plugins/module_utils/gcp/test_gcp_utils.py future-import-boilerplate
-tests/unit/plugins/module_utils/gcp/test_gcp_utils.py metaclass-boilerplate
 tests/unit/plugins/module_utils/gcp/test_utils.py future-import-boilerplate
 tests/unit/plugins/module_utils/gcp/test_utils.py metaclass-boilerplate
 tests/unit/plugins/module_utils/hwc/test_dict_comparison.py future-import-boilerplate

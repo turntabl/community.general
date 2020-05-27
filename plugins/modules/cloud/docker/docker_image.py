@@ -7,11 +7,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: docker_image
@@ -317,7 +312,7 @@ author:
 
 EXAMPLES = '''
 
-- name: pull an image
+- name: Pull an image
   docker_image:
     name: pacur/centos-7
     source: pull

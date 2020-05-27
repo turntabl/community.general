@@ -8,11 +8,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = r'''
 ---
 module: hpilo_info
@@ -51,8 +46,8 @@ notes:
 '''
 
 EXAMPLES = r'''
-# Task to gather facts from a HP iLO interface only if the system is an HP server
-- hpilo_info:
+- name: Gather facts from a HP iLO interface only if the system is an HP server
+  hpilo_info:
     host: YOUR_ILO_ADDRESS
     login: YOUR_ILO_LOGIN
     password: YOUR_ILO_PASSWORD
