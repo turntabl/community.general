@@ -57,6 +57,7 @@ MOCKED_DATA = '''{
             }
 '''
 
+
 class TestTerraformLookup:
 
     @pytest.fixture(scope="module")
@@ -66,11 +67,8 @@ class TestTerraformLookup:
     def test_terraform_version_number(self, convert_mocked_data):
         assert json_query(convert_mocked_data, "terraform_version") == "0.12.20"
 
-        
     def test_sample_certificate_name(self, convert_mocked_data):
-        assert json_query(convert_mocked_data,"resources[?module == 'module.sample-module'].name") == ["my-sample-certificate"]
+        assert json_query(convert_mocked_data, "resources[?module == 'module.sample-module'].name") == ["my-sample-certificate"]
 
-    
     def test_schema_version(self, convert_mocked_data):
         assert json_query(convert_mocked_data, "resources[?instances[?attributes.name == 's3-access']].instances[].attributes.name") == ['s3-access']
-
