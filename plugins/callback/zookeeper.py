@@ -22,12 +22,6 @@ DOCUMENTATION = '''
             key: hosts
         required: True
         type: str
-      user_id:
-        description: identifier for the lock
-        env:
-          - name: USER_ID
-        required: True
-        type: str
       locknode:
         description: path to create lock nodes
         env: 
@@ -43,7 +37,6 @@ examples: >
     [defaults]
     callback_whitelist = zookeeper
   Set the environment variable
-    export USER_ID=doreen7555
     export LOCK_NODE=ansible-zoo
   Set the ansible.cfg variable in the callback_zookeeper block
     [callback_zookeeper]
@@ -96,7 +89,6 @@ class CallbackModule(CallbackBase):
     def set_options(self, task_keys=None, var_options=None, direct=None):
         super(CallbackModule, self).set_options(task_keys=task_keys, var_options=var_options, direct=direct)
         self.hosts = self.get_option("hosts")
-        self.identifier = os.environ.get("USER_ID")
         self.client = KazooClient(self.hosts)
 
 
@@ -130,7 +122,7 @@ class CallbackModule(CallbackBase):
         else:
             self.lock_node = self.playbook_name
 
-        self.lock = Lock(self.client, self.lock_node, self.identifier)
+        self.lock = Lock(self.client, self.lock_node)
         self.set_option('lock_object', self.lock)
         self.lock_object = self.get_option('lock_object')
         try:
@@ -141,6 +133,8 @@ class CallbackModule(CallbackBase):
             self._display.display(msg, color=C.COLOR_ERROR, stderr=False)
             sys.exit(0)
         try:
+            msg="Acquiring Lock....."
+            self._display.display(msg, color=C.COLOR_OK, stderr=False)
             self.lock_object.acquire()
         except LockTimeout:
             msg="[ERROR] Lock already acquired"
