@@ -29,6 +29,13 @@ DOCUMENTATION = '''
         required: False
         type: str
         default: playbook name + _ + inventory name
+      timeout:
+        description: time in seconds to wait for an acquired lock. If the user does not specify
+                     a timeout, the user will be blocked until the lock is acquired.
+        env: 
+          - name: TIMEOUT
+        required: False
+        type: float
 '''
 
 EXAMPLES = '''
@@ -109,6 +116,7 @@ class CallbackModule(CallbackBase):
 
     def v2_playbook_on_start(self, playbook):
         self.locknode_env = os.environ.get("LOCK_NODE")
+        self.timeout = os.environ.get("TIMEOUT")
         self.playbook_name = playbook._file_name.split('.')[0]
         # setting playbook name with host names
         for argument in (a for a in context.CLIARGS if a != 'args'):
@@ -121,6 +129,16 @@ class CallbackModule(CallbackBase):
             self.lock_node = self.locknode_env
         else:
             self.lock_node = self.playbook_name
+
+        if self.timeout:
+            try:
+                self.lock_timeout = float(self.timeout)
+            except:
+                msg="[ERROR] Timeout received is not in required data type"
+                self._display.display(msg, color=C.COLOR_ERROR, stderr=False)
+                sys.exit(1)
+        else:
+            self.lock_timeout = None
 
         self.lock = Lock(self.client, self.lock_node)
         self.set_option('lock_object', self.lock)
@@ -135,7 +153,7 @@ class CallbackModule(CallbackBase):
         try:
             msg="Acquiring Lock....."
             self._display.display(msg, color=C.COLOR_OK, stderr=False)
-            self.lock_object.acquire()
+            self.lock_object.acquire(timeout=self.lock_timeout)
         except LockTimeout:
             msg="[ERROR] Lock already acquired"
             self._display.display(msg, color=C.COLOR_ERROR, stderr=False)
