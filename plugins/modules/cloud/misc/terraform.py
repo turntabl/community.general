@@ -30,6 +30,11 @@ options:
       - The path to the root of the Terraform directory with the
         vars.tf/main.tf/etc to use.
     required: true
+  log_error_path:
+    description:
+      - The path to the terraform directory to log error(s).
+    type: path
+    version_added: 0.2.0
   workspace:
     description:
       - The terraform workspace to work with.
@@ -103,11 +108,13 @@ EXAMPLES = """
 - name: Basic deploy of a service
   terraform:
     project_path: '{{ project_dir }}'
+    log_error_path: '{{ error_dir }}'
     state: present
 
 - name: Define the backend configuration at init
   terraform:
     project_path: 'project/'
+    log_error_path: './path_for_error/error.txt'
     state: "{{ state }}"
     force_init: true
     backend_config:
@@ -154,30 +161,55 @@ command:
   returned: always
   sample: terraform apply ...
 """
-
 import os
 import json
 import tempfile
-import traceback
-from ansible.module_utils.six.moves import shlex_quote
+import csv
 
+from datetime import datetime
+from io import StringIO
+from ansible.module_utils.six.moves import shlex_quote
 from ansible.module_utils.basic import AnsibleModule
 
 DESTROY_ARGS = ('destroy', '-no-color', '-force')
 APPLY_ARGS = ('apply', '-no-color', '-input=false', '-auto-approve=true')
 module = None
+current_DateTime = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 
-def preflight_validation(bin_path, project_path, variables_args=None, plan_file=None):
+def write_error_to_file(log_error_path, content):
+    error_dir_name, error_file_name = os.path.split(log_error_path)
+    if not os.path.exists(error_dir_name):
+        os.mkdir(error_dir_name)
+        if not os.path.exists(error_file_name):
+            with open(log_error_path, 'w+') as file:
+                writer = csv.writer(file, delimiter=',')
+                writer.writerow(StringIO('ERROR RECORDED on ' + current_DateTime + '\r' + content))
+    elif os.path.exists(log_error_path):
+        with open(log_error_path, 'a+', newline='') as file_o:
+            writer = csv.writer(file_o, delimiter=',')
+            writer.writerow(StringIO('ERROR RECORDED on ' + current_DateTime + '\r' + content))
+
+
+def preflight_validation(bin_path, project_path, log_error_path, variables_args=None, plan_file=None):
+
     if project_path in [None, ''] or '/' not in project_path:
+        if log_error_path is not None:
+            write_error_to_file(log_error_path, "Path for Terraform project can not be None or ''.")
         module.fail_json(msg="Path for Terraform project can not be None or ''.")
     if not os.path.exists(bin_path):
+        if log_error_path is not None:
+            write_error_to_file(log_error_path, "Path for Terraform binary '{0}' doesn't exist on this host.".format(bin_path))
         module.fail_json(msg="Path for Terraform binary '{0}' doesn't exist on this host - check the path and try again please.".format(bin_path))
     if not os.path.isdir(project_path):
+        if log_error_path is not None:
+            write_error_to_file(log_error_path, "Path for Terraform project '{0}' doesn't exist on this host. ".format(project_path))
         module.fail_json(msg="Path for Terraform project '{0}' doesn't exist on this host - check the path and try again please.".format(project_path))
 
     rc, out, err = module.run_command([bin_path, 'validate'] + variables_args, cwd=project_path, use_unsafe_shell=True)
     if rc != 0:
+        if log_error_path is not None:
+            write_error_to_file(log_error_path, "Failed to validate Terraform configuration files:\r\n{0}".format(err))
         module.fail_json(msg="Failed to validate Terraform configuration files:\r\n{0}".format(err))
 
 
@@ -273,6 +305,7 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             project_path=dict(required=True, type='path'),
+            log_error_path=dict(type='path'),
             binary_path=dict(type='path'),
             workspace=dict(required=False, type='str', default='default'),
             purge_workspace=dict(type='bool', default=False),
@@ -292,6 +325,7 @@ def main():
         supports_check_mode=True,
     )
 
+    log_error_path = module.params.get('log_error_path')
     project_path = module.params.get('project_path')
     bin_path = module.params.get('binary_path')
     workspace = module.params.get('workspace')
@@ -304,6 +338,7 @@ def main():
     force_init = module.params.get('force_init')
     backend_config = module.params.get('backend_config')
     backend_config_files = module.params.get('backend_config_files')
+
 
     if bin_path is not None:
         command = [bin_path]
@@ -335,7 +370,7 @@ def main():
         for f in variables_files:
             variables_args.extend(['-var-file', f])
 
-    preflight_validation(command[0], project_path, variables_args)
+    preflight_validation(command[0], project_path, log_error_path, variables_args)
 
     if module.params.get('lock') is not None:
         if module.params.get('lock'):
