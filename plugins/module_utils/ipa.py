@@ -83,7 +83,7 @@ class IPAClient(object):
                 if status_code not in [200, 201, 204]:
                     self._fail('login', info['msg'])
 
-                self.headers = {'Cookie': resp.info().get('Set-Cookie')}
+                self.headers = {'Cookie': info.get('set-cookie')}
             except Exception as e:
                 self._fail('login', to_native(e))
         if not self.headers:
@@ -119,9 +119,9 @@ class IPAClient(object):
         data = dict(method=method)
 
         # TODO: We should probably handle this a little better.
-        if method in ('ping', 'config_show'):
+        if method in ('ping', 'config_show', 'otpconfig_show'):
             data['params'] = [[], {}]
-        elif method == 'config_mod':
+        elif method in ('config_mod', 'otpconfig_mod'):
             data['params'] = [[], item]
         else:
             data['params'] = [[name], item]

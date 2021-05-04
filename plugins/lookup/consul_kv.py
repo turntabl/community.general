@@ -6,7 +6,8 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 DOCUMENTATION = '''
-    lookup: consul_kv
+    author: Unknown (!UNKNOWN)
+    name: consul_kv
     short_description: Fetch metadata from a Consul key value store.
     description:
       - Lookup metadata for a playbook from the key value store in a Consul cluster.
@@ -27,7 +28,7 @@ DOCUMENTATION = '''
           - If the key has a value with the specified index then this is returned allowing access to historical values.
       datacenter:
         description:
-          - Retrieve the key from a consul datatacenter other than the default for the consul host.
+          - Retrieve the key from a consul datacenter other than the default for the consul host.
       token:
         description: The acl token to allow access to restricted values.
       host:
@@ -78,26 +79,27 @@ DOCUMENTATION = '''
 '''
 
 EXAMPLES = """
-  - debug:
+  - ansible.builtin.debug:
       msg: 'key contains {{item}}'
-    with_consul_kv:
+    with_community.general.consul_kv:
       - 'key/to/retrieve'
 
   - name: Parameters can be provided after the key be more specific about what to retrieve
-    debug:
+    ansible.builtin.debug:
       msg: 'key contains {{item}}'
-    with_consul_kv:
+    with_community.general.consul_kv:
       - 'key/to recurse=true token=E6C060A9-26FB-407A-B83E-12DDAFCB4D98'
 
   - name: retrieving a KV from a remote cluster on non default port
-    debug:
-      msg: "{{ lookup('consul_kv', 'my/key', host='10.10.10.10', port='2000') }}"
+    ansible.builtin.debug:
+      msg: "{{ lookup('community.general.consul_kv', 'my/key', host='10.10.10.10', port='2000') }}"
 """
 
 RETURN = """
   _raw:
     description:
       - Value(s) stored in consul.
+    type: dict
 """
 
 import os

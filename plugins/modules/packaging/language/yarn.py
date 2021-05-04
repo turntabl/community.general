@@ -21,17 +21,20 @@ author:
   - "Chris Hoffman (@chrishoffman), creator of NPM Ansible module)"
 options:
   name:
+    type: str
     description:
       - The name of a node.js library to install
       - If omitted all packages in package.json are installed.
       - To globally install from local node.js library. Prepend "file:" to the path of the node.js library.
     required: false
   path:
+    type: path
     description:
       - The base path where Node.js libraries will be installed.
       - This is where the node_modules folder lives.
     required: false
   version:
+    type: str
     description:
       - The version of the library to be installed.
       - Must be in semver format. If "latest" is desired, use "state" arg instead
@@ -43,6 +46,7 @@ options:
     default: no
     type: bool
   executable:
+    type: path
     description:
       - The executable location for yarn.
     required: false
@@ -60,10 +64,12 @@ options:
     type: bool
     default: no
   registry:
+    type: str
     description:
       - The registry to install modules from.
     required: false
   state:
+    type: str
     description:
       - Installation state of the named node.js library
       - If absent is selected, a name option must be provided
@@ -76,38 +82,38 @@ requirements:
 
 EXAMPLES = '''
 - name: Install "imagemin" node.js package.
-  yarn:
+  community.general.yarn:
     name: imagemin
     path: /app/location
 
 - name: Install "imagemin" node.js package on version 5.3.1
-  yarn:
+  community.general.yarn:
     name: imagemin
     version: '5.3.1'
     path: /app/location
 
 - name: Install "imagemin" node.js package globally.
-  yarn:
+  community.general.yarn:
     name: imagemin
     global: yes
 
 - name: Remove the globally-installed package "imagemin".
-  yarn:
+  community.general.yarn:
     name: imagemin
     global: yes
     state: absent
 
 - name: Install "imagemin" node.js package from custom registry.
-  yarn:
+  community.general.yarn:
     name: imagemin
     registry: 'http://registry.mysite.com'
 
 - name: Install packages based on package.json.
-  yarn:
+  community.general.yarn:
     path: /app/location
 
 - name: Update all packages in package.json to their latest version.
-  yarn:
+  community.general.yarn:
     path: /app/location
     state: latest
 '''
@@ -243,7 +249,7 @@ class Yarn(object):
             return installed, missing
 
         for dep in dependencies:
-            name, version = dep['name'].split('@')
+            name, version = dep['name'].rsplit('@', 1)
             installed.append(name)
 
         if self.name not in installed:
@@ -273,6 +279,9 @@ class Yarn(object):
         cmd_result, err = self._exec(['outdated', '--json'], True, False)
         if err:
             self.module.fail_json(msg=err)
+
+        if not cmd_result:
+            return outdated
 
         outdated_packages_data = cmd_result.splitlines()[1]
 

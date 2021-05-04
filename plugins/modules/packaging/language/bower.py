@@ -17,6 +17,7 @@ description:
 author: "Michael Warkentin (@mwarkentin)"
 options:
   name:
+    type: str
     description:
       - The name of a bower package to install
   offline:
@@ -30,43 +31,47 @@ options:
     type: bool
     default: 'no'
   path:
+    type: path
     description:
       - The base path where to install the bower packages
     required: true
   relative_execpath:
+    type: path
     description:
       - Relative path to bower executable from install path
   state:
+    type: str
     description:
       - The state of the bower package
     default: present
     choices: [ "present", "absent", "latest" ]
   version:
+    type: str
     description:
       - The version to be installed
 '''
 
 EXAMPLES = '''
 - name: Install "bootstrap" bower package.
-  bower:
+  community.general.bower:
     name: bootstrap
 
 - name: Install "bootstrap" bower package on version 3.1.1.
-  bower:
+  community.general.bower:
     name: bootstrap
     version: '3.1.1'
 
 - name: Remove the "bootstrap" bower package.
-  bower:
+  community.general.bower:
     name: bootstrap
     state: absent
 
 - name: Install packages based on bower.json.
-  bower:
+  community.general.bower:
     path: /app/location
 
 - name: Update packages based on bower.json to their latest version.
-  bower:
+  community.general.bower:
     path: /app/location
     state: latest
 
@@ -75,7 +80,7 @@ EXAMPLES = '''
     path: /app/location
     name: bower
     global: no
-- bower:
+- community.general.bower:
     path: /app/location
     relative_execpath: node_modules/.bin
 '''

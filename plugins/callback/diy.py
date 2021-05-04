@@ -7,8 +7,8 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 DOCUMENTATION = r'''
-  callback: diy
-  callback_type: stdout
+  name: diy
+  type: stdout
   short_description: Customize the output
   version_added: 0.2.0
   description:
@@ -629,7 +629,7 @@ playbook.yml: >
     gather_facts: no
     tasks:
       - name:  Default plugin output
-        debug:
+        ansible.builtin.debug:
           msg: default plugin output
 
   - name: Override from play vars
@@ -687,11 +687,11 @@ playbook.yml: >
 
     tasks:
       - name: Custom banner with default plugin result output
-        debug:
+        ansible.builtin.debug:
           msg: "default plugin output: result example"
 
       - name: Override from task vars
-        debug:
+        ansible.builtin.debug:
           msg: "example {{ two }}"
         changed_when: true
         vars:
@@ -703,14 +703,14 @@ playbook.yml: >
           ansible_callback_diy_runner_on_ok_msg_color: "{{ 'yellow' if ansible_callback_diy.result.is_changed else 'bright green' }}"
 
       - name: Suppress output
-        debug:
+        ansible.builtin.debug:
           msg: i should not be displayed
         vars:
           ansible_callback_diy_playbook_on_task_start_msg: ""
           ansible_callback_diy_runner_on_ok_msg: ""
 
       - name: Using alias vars (see ansible.cfg)
-        debug:
+        ansible.builtin.debug:
           msg:
         when: False
         vars:
@@ -719,13 +719,13 @@ playbook.yml: >
           on_skipped_msg_color: white
 
       - name: Just stdout
-        command: echo some stdout
+        ansible.builtin.command: echo some stdout
         vars:
           ansible_callback_diy_playbook_on_task_start_msg: "\n"
           ansible_callback_diy_runner_on_ok_msg: "{{ ansible_callback_diy.result.output.stdout }}\n"
 
       - name: Multiline output
-        debug:
+        ansible.builtin.debug:
           msg: "{{ multiline }}"
         vars:
           ansible_callback_diy_playbook_on_task_start_msg: "\nDIY output(via task vars): task example: {{ ansible_callback_diy.task.name }}"
@@ -738,7 +738,7 @@ playbook.yml: >
           ansible_callback_diy_playbook_on_task_start_msg_color: bright blue
 
       - name: Indentation
-        debug:
+        ansible.builtin.debug:
           msg: "{{ item.msg }}"
         with_items:
           - { indent: 1, msg: one., color: red }
@@ -751,14 +751,14 @@ playbook.yml: >
           ansible_callback_diy_runner_on_ok_msg_color: bright green
 
       - name: Using lookup and template as file
-        shell: "echo {% raw %}'output from {{ file_name }}'{% endraw %} > {{ file_name }}"
+        ansible.builtin.shell: "echo {% raw %}'output from {{ file_name }}'{% endraw %} > {{ file_name }}"
         vars:
           ansible_callback_diy_playbook_on_task_start_msg: "\nDIY output(via task vars): task example: {{ ansible_callback_diy.task.name }}"
           file_name: diy_file_template_example
           ansible_callback_diy_runner_on_ok_msg: "{{ lookup('template', file_name) }}"
 
       - name: 'Look at top level vars available to the "runner_on_ok" callback'
-        debug:
+        ansible.builtin.debug:
           msg: ''
         vars:
           ansible_callback_diy_playbook_on_task_start_msg: "\nDIY output(via task vars): task example: {{ ansible_callback_diy.task.name }}"
@@ -771,7 +771,7 @@ playbook.yml: >
           ansible_callback_diy_runner_on_ok_msg_color: white
 
       - name: 'Look at event data available to the "runner_on_ok" callback'
-        debug:
+        ansible.builtin.debug:
           msg: ''
         vars:
           ansible_callback_diy_playbook_on_task_start_msg: "\nDIY output(via task vars): task example: {{ ansible_callback_diy.task.name }}"
@@ -1013,7 +1013,7 @@ class CallbackModule(Default):
             for attr in _stats_attributes:
                 _ret[self.DIY_NS]['stats'].update({attr: _get_value(obj=stats, attr=attr)})
 
-        _ret[self.DIY_NS].update({'top_level_var_names': _ret.keys()})
+        _ret[self.DIY_NS].update({'top_level_var_names': list(_ret.keys())})
 
         return _ret
 

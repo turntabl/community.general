@@ -21,16 +21,19 @@ author:
     - Jonathan Lestrelin (@jle64) <jonathan.lestrelin@gmail.com>
 options:
     name:
+        type: str
         description:
             - Name of the package to install, upgrade, or remove.
         required: true
-
+        aliases: [pkg]
     state:
+        type: str
         description:
             - Desired state of the package.
         default: "present"
-        choices: ["present", "absent", "latest"]
+        choices: ["present", "installed", "latest", "absent", "removed"]
     executable:
+        type: path
         description:
             - Path to the pear executable.
     prompts:
@@ -50,24 +53,24 @@ options:
 
 EXAMPLES = r'''
 - name: Install pear package
-  pear:
+  community.general.pear:
     name: Net_URL2
     state: present
 
 - name: Install pecl package
-  pear:
+  community.general.pear:
     name: pecl/json_post
     state: present
 
 - name: Install pecl package with expected prompt
-  pear:
+  community.general.pear:
     name: pecl/apcu
     state: present
     prompts:
         - (.*)Enable internal debugging in APCu \[no\]
 
 - name: Install pecl package with expected prompt and an answer
-  pear:
+  community.general.pear:
     name: pecl/apcu
     state: present
     prompts:
@@ -77,7 +80,7 @@ EXAMPLES = r'''
     Prompts will be processed on the same order as the packages order.
     If there is more prompts than packages, packages without prompts will be installed without any prompt expected.
     If there is more packages than prompts, additionnal prompts will be ignored.
-  pear:
+  community.general.pear:
     name: pecl/gnupg, pecl/apcu
     state: present
     prompts:
@@ -88,7 +91,7 @@ EXAMPLES = r'''
     Prompts will be processed on the same order as the packages order.
     If there is more prompts than packages, packages without prompts will be installed without any prompt expected.
     If there is more packages than prompts, additionnal prompts will be ignored.
-  pear:
+  community.general.pear:
     name: pecl/gnupg, pecl/apcu
     state: present
     prompts:
@@ -96,12 +99,12 @@ EXAMPLES = r'''
       - (.*)Enable internal debugging in APCu \[no\]: "yes"
 
 - name: Upgrade package
-  pear:
+  community.general.pear:
     name: Net_URL2
     state: latest
 
 - name: Remove packages
-  pear:
+  community.general.pear:
     name: Net_URL2,pecl/json_post
     state: absent
 '''
